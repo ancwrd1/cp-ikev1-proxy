@@ -11,7 +11,7 @@ This is mainly a troubleshooting tool for the [snx-rs](https://github.com/ancwrd
 4. Connect to the newly created connection
 5. Collect the logs from the console
 
-*NOTE:* The VPN protocol implementation is still incomplete and the connection will eventually fail.
+**NOTE** VPN protocol proxying is incomplete and the connection will eventually fail.
 
 ## License
 
