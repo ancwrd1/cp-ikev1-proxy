@@ -106,7 +106,7 @@ impl Ikev1SessionHandler {
     }
 
     async fn handle_esp_sa(&mut self, message: IsakmpMessage) -> anyhow::Result<Bytes> {
-        debug!("<<< Upstream ESP SA request: {:?}", message);
+        debug!("<<< Upstream ESP SA request: {:#?}", message);
 
         let attrs = self
             .downstream_service
