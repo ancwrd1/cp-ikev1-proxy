@@ -1,7 +1,7 @@
 # cp-ikev1-proxy
 
 A MITM proxy which intercepts Check Point IKEv1/TCPT requests and dumps them to the debug output.
-This is mainly a troubleshooting tool for the [snx-rs](https://github/ancwrd1/snx-rs) project.
+This is mainly a troubleshooting tool for the [snx-rs](https://github.com/ancwrd1/snx-rs) project.
 
 ## Usage
 
