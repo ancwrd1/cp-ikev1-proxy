@@ -12,3 +12,7 @@ This is mainly a troubleshooting tool for the [snx-rs](https://github/ancwrd1/sn
 5. Collect the logs from the console
 
 *NOTE:* The VPN protocol implementation is still incomplete and the connection will eventually fail.
+
+## License
+
+Licensed under the [GNU Affero General Public License version 3](https://opensource.org/license/agpl-v3/).
