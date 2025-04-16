@@ -41,6 +41,7 @@ impl HttpsProxy {
 
         debug!("<<< Upstream TLS connection accepted");
 
+        // We don't care about downstream certificates.
         let tls_connector = TlsConnector::builder()
             .danger_accept_invalid_certs(true)
             .danger_accept_invalid_hostnames(true)
@@ -72,6 +73,8 @@ impl HttpsProxy {
     }
 
     pub async fn run(&mut self) -> anyhow::Result<()> {
+        // For some reason using Hyper HTTP server does not work together with Check Point Windows client.
+        // We parse the request manually using httparse crate.
         let request = parse_http_request(&mut self.upstream_tls).await?;
 
         debug!("<<< Upstream HTTP request: {:#?}", request);
@@ -90,6 +93,8 @@ impl HttpsProxy {
         let data = res.collect().await?.to_bytes();
 
         let new_data = if status.is_success() {
+            // "internal_ca_fingerprint" is used to verify the validity of the IKE certificate during IDPROT exchange.
+            // We need to replace it with our own otherwise the client will show an "Invalid certificate" error.
             self.replace_ca_fingerprint(&data)?
         } else {
             data

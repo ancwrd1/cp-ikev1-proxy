@@ -10,7 +10,7 @@ use isakmp::{
 use tokio::net::TcpStream;
 use tokio_util::codec::Decoder;
 
-use crate::{CertType, ProxyParams, session::Ikev1SessionHandler};
+use crate::{CertType, ProxyParams, ikev1::Ikev1SessionHandler};
 
 pub struct TcptProxy {
     upstream: TcpStream,
