@@ -8,11 +8,6 @@ use tracing::metadata::LevelFilter;
 async fn main() -> anyhow::Result<()> {
     let params = ProxyParams::parse();
 
-    let args = std::env::args().collect::<Vec<_>>();
-    if args.len() < 2 {
-        anyhow::bail!("usage: {} <address>", args[0]);
-    }
-
     if std::env::var("RUST_LOG").is_err() {
         let subscriber = tracing_subscriber::fmt()
             .with_max_level(LevelFilter::DEBUG)
