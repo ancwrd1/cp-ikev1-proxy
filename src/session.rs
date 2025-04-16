@@ -1,15 +1,14 @@
-use std::{net::Ipv4Addr, time::Duration};
+use std::{net::Ipv4Addr, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use bytes::{BufMut, Bytes, BytesMut};
-use isakmp::model::AttributesPayloadType;
 use isakmp::{
     certs::{ClientCertificate, Pkcs8Certificate},
     ikev1::{service::Ikev1Service, session::Ikev1Session},
     message::{IsakmpMessage, IsakmpMessageCodec},
     model::{
-        CertificateType, ExchangeType, Identity, IdentityRequest, IdentityType, IsakmpFlags,
-        NotifyMessageType, PayloadType, ProtocolId,
+        AttributesPayloadType, CertificateType, ExchangeType, Identity, IdentityRequest,
+        IdentityType, IsakmpFlags, NotifyMessageType, PayloadType, ProtocolId,
     },
     payload::{
         AttributesPayload, BasicPayload, CertificatePayload, IdentificationPayload, Payload,
@@ -19,17 +18,21 @@ use isakmp::{
 };
 use tracing::debug;
 
-use crate::assets::{KEYSTORE, KEYSTORE_PASSWORD};
+use crate::{
+    ProxyParams,
+    assets::{KEYSTORE, KEYSTORE_PASSWORD},
+};
 
 pub struct Ikev1SessionHandler {
     upstream_session: Ikev1Session,
     upstream_codec: Box<dyn IsakmpMessageCodec + Send + Sync>,
     downstream_service: Ikev1Service,
     downstream_message_id: u32,
+    params: Arc<ProxyParams>,
 }
 
 impl Ikev1SessionHandler {
-    pub fn new(service: Ikev1Service) -> anyhow::Result<Self> {
+    pub fn new(params: Arc<ProxyParams>, service: Ikev1Service) -> anyhow::Result<Self> {
         let upstream_session = Ikev1Session::new(Identity::None, SessionType::Responder).unwrap();
         let upstream_codec = upstream_session.new_codec();
 
@@ -38,6 +41,7 @@ impl Ikev1SessionHandler {
             upstream_codec,
             downstream_service: service,
             downstream_message_id: 0,
+            params,
         })
     }
 
@@ -168,7 +172,7 @@ impl Ikev1SessionHandler {
             auth_blob: String::from_utf8_lossy(&data).into_owned(),
             verify_certs: false,
             ca_certs: vec![],
-            with_mfa: true,
+            with_mfa: !self.params.no_mfa,
         };
 
         let (response, message_id) = self

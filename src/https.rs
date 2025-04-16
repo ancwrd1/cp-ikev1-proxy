@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bytes::Bytes;
 use http::{Request, Version};
 use http_body_util::{BodyExt, Full};
@@ -13,6 +15,7 @@ use tokio::{
 use tracing::{debug, warn};
 
 use crate::{
+    ProxyParams,
     assets::{KEYSTORE, KEYSTORE_PASSWORD},
     sexpr::SExpression,
     util::{key_to_english, snx_encrypt},
@@ -25,7 +28,7 @@ pub struct HttpsProxy {
 
 impl HttpsProxy {
     pub async fn new(
-        host: &str,
+        params: Arc<ProxyParams>,
         upstream: TcpStream,
         downstream: TcpStream,
     ) -> anyhow::Result<Self> {
@@ -44,7 +47,9 @@ impl HttpsProxy {
             .build()?;
         let tls_connector = tokio_native_tls::TlsConnector::from(tls_connector);
 
-        let downstream_tls = tls_connector.connect(host, downstream).await?;
+        let downstream_tls = tls_connector
+            .connect(&params.server_address, downstream)
+            .await?;
 
         debug!(">>> Downstream TLS connection succeeded");
 

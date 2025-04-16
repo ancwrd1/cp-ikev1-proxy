@@ -1,16 +1,13 @@
-use crate::proxy::Ikev1Proxy;
-use tracing::metadata::LevelFilter;
+use std::sync::Arc;
 
-mod assets;
-mod https;
-mod proxy;
-mod session;
-mod sexpr;
-mod tcpt;
-mod util;
+use clap::Parser;
+use cp_ikev1_proxy::{ProxyParams, proxy::Ikev1Proxy};
+use tracing::metadata::LevelFilter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let params = ProxyParams::parse();
+
     let args = std::env::args().collect::<Vec<_>>();
     if args.len() < 2 {
         anyhow::bail!("usage: {} <address>", args[0]);
@@ -21,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
 
-    let proxy = Ikev1Proxy::new(&args[1]);
+    let proxy = Ikev1Proxy::new(Arc::new(params));
     proxy.run().await?;
 
     Ok(())
