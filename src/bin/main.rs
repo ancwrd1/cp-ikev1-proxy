@@ -13,10 +13,17 @@ async fn main() -> anyhow::Result<()> {
         anyhow::bail!("usage: {} <address>", args[0]);
     }
 
-    let subscriber = tracing_subscriber::fmt()
-        .with_max_level(LevelFilter::DEBUG)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber)?;
+    if std::env::var("RUST_LOG").is_err() {
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(LevelFilter::DEBUG)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)?;
+    } else {
+        let subscriber = tracing_subscriber::fmt()
+            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)?;
+    }
 
     let proxy = Ikev1Proxy::new(Arc::new(params));
     proxy.run().await?;
