@@ -10,7 +10,10 @@ use isakmp::{
 use tokio::net::TcpStream;
 use tokio_util::codec::Decoder;
 
-use crate::{CertType, ProxyParams, ikev1::Ikev1SessionHandler};
+use crate::{
+    ikev1::Ikev1SessionHandler,
+    params::{CertType, ProxyParams},
+};
 
 pub struct TcptProxy {
     upstream: TcpStream,
@@ -27,6 +30,7 @@ impl TcptProxy {
 
         let mut hs_downstream = TcptTransportCodec::new(TcptDataType::Cmd).framed(&mut downstream);
 
+        // first packet is a handshake for IKE
         let upstream_data = hs_upstream
             .next()
             .await

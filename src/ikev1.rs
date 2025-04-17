@@ -19,7 +19,7 @@ use isakmp::{
 use tracing::debug;
 
 use crate::{
-    ProxyParams,
+    params::ProxyParams,
     assets::{KEYSTORE, KEYSTORE_PASSWORD},
 };
 

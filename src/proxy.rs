@@ -3,14 +3,14 @@ use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tracing::{debug, warn};
 
-use crate::{ProxyParams, https::HttpsProxy, tcpt::TcptProxy};
+use crate::{https::HttpsProxy, params::ProxyParams, tcpt::TcptProxy};
 
-pub struct Ikev1Proxy {
+pub struct CheckPointProxy {
     params: Arc<ProxyParams>,
 }
 
-impl Ikev1Proxy {
-    pub fn new(params: Arc<ProxyParams>) -> Ikev1Proxy {
+impl CheckPointProxy {
+    pub fn new(params: Arc<ProxyParams>) -> CheckPointProxy {
         Self { params }
     }
 

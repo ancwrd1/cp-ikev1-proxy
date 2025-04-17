@@ -15,8 +15,8 @@ use tokio::{
 use tracing::{debug, warn};
 
 use crate::{
-    ProxyParams,
     assets::{KEYSTORE, KEYSTORE_PASSWORD},
+    params::ProxyParams,
     sexpr::SExpression,
     util::{key_to_english, snx_encrypt},
 };
@@ -32,9 +32,8 @@ impl HttpsProxy {
         upstream: TcpStream,
         downstream: TcpStream,
     ) -> anyhow::Result<Self> {
-        let identity = Identity::from_pkcs12(KEYSTORE, KEYSTORE_PASSWORD)?;
-
-        let tls_acceptor = TlsAcceptor::new(identity)?;
+        let tls_identity = Identity::from_pkcs12(KEYSTORE, KEYSTORE_PASSWORD)?;
+        let tls_acceptor = TlsAcceptor::new(tls_identity)?;
         let tls_acceptor = tokio_native_tls::TlsAcceptor::from(tls_acceptor);
 
         let upstream_tls = tls_acceptor.accept(upstream).await?;
@@ -62,7 +61,7 @@ impl HttpsProxy {
 
         tokio::task::spawn(async move {
             if let Err(err) = conn.await {
-                warn!("Connection failed: {:?}", err);
+                warn!("Connection failed: {}", err);
             }
         });
 
@@ -210,8 +209,7 @@ async fn parse_http_request(
 
     let request = builder
         .uri(parsed_req.path.unwrap_or_default())
-        .body(body)
-        .map_err(|_| anyhow::anyhow!("Invalid HTTP response (internal)".to_owned()))?;
+        .body(body)?;
 
     Ok(request)
 }
