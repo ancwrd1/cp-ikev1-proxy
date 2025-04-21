@@ -6,7 +6,10 @@ use http_body_util::{BodyExt, Full};
 use httparse::Status;
 use hyper::client::conn::http1::SendRequest;
 use hyper_util::rt::TokioIo;
-use isakmp::certs::{ClientCertificate, Pkcs8Certificate};
+use isakmp::{
+    certs::{ClientCertificate, Pkcs8Certificate},
+    rfc1751::key_to_english,
+};
 use native_tls::{Identity, TlsAcceptor, TlsConnector};
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
@@ -18,7 +21,7 @@ use crate::{
     assets::{KEYSTORE, KEYSTORE_PASSWORD},
     params::ProxyParams,
     sexpr::SExpression,
-    util::{key_to_english, snx_encrypt},
+    util::snx_encrypt,
 };
 
 pub struct HttpsProxy {

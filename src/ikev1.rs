@@ -19,8 +19,8 @@ use isakmp::{
 use tracing::debug;
 
 use crate::{
-    params::ProxyParams,
     assets::{KEYSTORE, KEYSTORE_PASSWORD},
+    params::ProxyParams,
 };
 
 pub struct Ikev1SessionHandler {
@@ -170,8 +170,7 @@ impl Ikev1SessionHandler {
 
         let request = IdentityRequest {
             auth_blob: String::from_utf8_lossy(&data).into_owned(),
-            verify_certs: false,
-            ca_certs: vec![],
+            internal_ca_fingerprints: vec![],
             with_mfa: !self.params.no_mfa,
         };
 
