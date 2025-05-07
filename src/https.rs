@@ -145,6 +145,7 @@ async fn parse_http_request(
 
     let mut message = String::new();
     reader.read_line(&mut message).await?;
+    debug!("HTTP: request: {}", message);
 
     let mut header_count = 0;
     loop {
@@ -152,14 +153,17 @@ async fn parse_http_request(
         if reader.read_line(&mut line).await? > 0 {
             message.push_str(&line);
             if line.trim().is_empty() {
+                debug!("HTTP: no more headers");
                 break;
             } else {
+                debug!("HTTP: header: {}", line);
                 header_count += 1;
                 if header_count > 64 {
                     anyhow::bail!("Too many headers".to_owned());
                 }
             }
         } else {
+            debug!("HTTP: no more data");
             break;
         }
     }
@@ -170,7 +174,7 @@ async fn parse_http_request(
     let parse_status = parsed_req.parse(message.as_bytes())?;
 
     let Status::Complete(_) = parse_status else {
-        anyhow::bail!("Incomplete request".to_owned(),);
+        anyhow::bail!("Incomplete request");
     };
 
     let content_length = parsed_req
