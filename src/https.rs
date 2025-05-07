@@ -151,7 +151,7 @@ async fn parse_http_request(
 
     let mut message = String::new();
     reader.read_line(&mut message).await?;
-    debug!("HTTP: request: {}", message);
+    debug!("HTTP: request: {}", message.trim());
 
     let mut header_count = 0;
     loop {
@@ -162,7 +162,7 @@ async fn parse_http_request(
                 debug!("HTTP: no more headers");
                 break;
             } else {
-                debug!("HTTP: header: {}", line);
+                debug!("HTTP: header: {}", line.trim());
                 header_count += 1;
                 if header_count > 64 {
                     anyhow::bail!("Too many headers".to_owned());
