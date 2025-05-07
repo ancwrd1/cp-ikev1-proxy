@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use http::{Request, Version};
 use http_body_util::{BodyExt, Full};
 use httparse::Status;
@@ -11,6 +11,7 @@ use isakmp::{
     rfc1751::key_to_english,
 };
 use native_tls::{Identity, TlsAcceptor, TlsConnector};
+use tokio::io::AsyncRead;
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
@@ -187,7 +188,11 @@ async fn parse_http_request(
         .iter()
         .find(|h| h.name.eq_ignore_ascii_case("content-length"));
 
-    // naive HTTP body read (no chunked transfer-encoding)
+    let transfer_encoding = parsed_req
+        .headers
+        .iter()
+        .find(|h| h.name.eq_ignore_ascii_case("transfer-encoding"));
+
     let body = if let Some(content_length) = content_length {
         let len: usize = String::from_utf8_lossy(content_length.value).parse()?;
 
@@ -195,6 +200,12 @@ async fn parse_http_request(
         reader.read_exact(&mut buf).await?;
 
         buf.into()
+    } else if let Some(encoding) = transfer_encoding {
+        if encoding.value == b"chunked" {
+            read_chunked_body(&mut reader).await?
+        } else {
+            anyhow::bail!("Unsupported transfer encoding");
+        }
     } else if parsed_req.version == Some(0) {
         // HTTP 1.0: reading until the end of stream
 
@@ -224,4 +235,41 @@ async fn parse_http_request(
         .body(body)?;
 
     Ok(request)
+}
+
+async fn read_chunked_body<S: AsyncRead + Unpin>(
+    reader: &mut BufReader<S>,
+) -> anyhow::Result<Bytes> {
+    let mut buffer = BytesMut::new();
+
+    loop {
+        let mut size_line = String::new();
+        reader.read_line(&mut size_line).await?;
+
+        // Parse chunk size (hex string)
+        let size = usize::from_str_radix(size_line.trim(), 16)?;
+
+        if size == 0 {
+            let mut crlf = [0u8; 2];
+            reader.read_exact(&mut crlf).await?;
+            if crlf != [b'\r', b'\n'] {
+                anyhow::bail!("Invalid chunk ending");
+            }
+            break;
+        }
+
+        // Read chunk data
+        let mut chunk = vec![0u8; size];
+        reader.read_exact(&mut chunk).await?;
+        buffer.extend_from_slice(&chunk);
+
+        // Consume trailing CRLF
+        let mut crlf = [0u8; 2];
+        reader.read_exact(&mut crlf).await?;
+        if crlf != [b'\r', b'\n'] {
+            anyhow::bail!("Invalid chunk ending");
+        }
+    }
+
+    Ok(buffer.freeze())
 }
