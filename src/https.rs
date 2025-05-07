@@ -246,28 +246,22 @@ async fn read_chunked_body<S: AsyncRead + Unpin>(
         let mut size_line = String::new();
         reader.read_line(&mut size_line).await?;
 
-        // Parse chunk size (hex string)
         let size = usize::from_str_radix(size_line.trim(), 16)?;
 
-        if size == 0 {
-            let mut crlf = [0u8; 2];
-            reader.read_exact(&mut crlf).await?;
-            if crlf != [b'\r', b'\n'] {
-                anyhow::bail!("Invalid chunk ending");
-            }
-            break;
+        if size != 0 {
+            let mut chunk = vec![0u8; size];
+            reader.read_exact(&mut chunk).await?;
+            buffer.extend_from_slice(&chunk);
         }
 
-        // Read chunk data
-        let mut chunk = vec![0u8; size];
-        reader.read_exact(&mut chunk).await?;
-        buffer.extend_from_slice(&chunk);
-
-        // Consume trailing CRLF
         let mut crlf = [0u8; 2];
         reader.read_exact(&mut crlf).await?;
         if crlf != [b'\r', b'\n'] {
             anyhow::bail!("Invalid chunk ending");
+        }
+
+        if size == 0 {
+            break;
         }
     }
 
