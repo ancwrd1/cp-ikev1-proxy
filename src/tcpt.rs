@@ -59,10 +59,7 @@ impl TcptProxy {
             },
             Some(CertType::Pkcs11) => match params.cert_password {
                 Some(ref pin) => Identity::Pkcs11 {
-                    driver_path: params
-                        .cert_path
-                        .clone()
-                        .unwrap_or_else(|| "opensc-pkcs11.so".into()),
+                    driver_path: params.cert_path.clone().unwrap_or_else(|| "opensc-pkcs11.so".into()),
                     pin: pin.clone(),
                     key_id: params
                         .cert_id
@@ -95,8 +92,7 @@ impl TcptProxy {
     }
 
     pub async fn run(&mut self) -> anyhow::Result<()> {
-        let mut upstream_framed =
-            TcptTransportCodec::new(TcptDataType::Ike).framed(&mut self.upstream);
+        let mut upstream_framed = TcptTransportCodec::new(TcptDataType::Ike).framed(&mut self.upstream);
 
         while let Some(Ok(msg)) = upstream_framed.next().await {
             for data in self.handler.on_upstream_message(msg).await? {

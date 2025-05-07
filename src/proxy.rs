@@ -33,10 +33,7 @@ impl CheckPointProxy {
     }
 }
 
-async fn handle_new_connection(
-    params: Arc<ProxyParams>,
-    upstream: TcpStream,
-) -> anyhow::Result<()> {
+async fn handle_new_connection(params: Arc<ProxyParams>, upstream: TcpStream) -> anyhow::Result<()> {
     debug!("Connecting to {}", params.server_address);
 
     let downstream = TcpStream::connect(&format!("{}:443", params.server_address)).await?;
@@ -48,16 +45,10 @@ async fn handle_new_connection(
     if size == 1 && buf[0] == 0 {
         debug!("Proxying TCPT connection to {}", params.server_address);
 
-        TcptProxy::new(params, upstream, downstream)
-            .await?
-            .run()
-            .await
+        TcptProxy::new(params, upstream, downstream).await?.run().await
     } else {
         debug!("Proxying HTTPS connection to {}", params.server_address);
 
-        HttpsProxy::new(params, upstream, downstream)
-            .await?
-            .run()
-            .await
+        HttpsProxy::new(params, upstream, downstream).await?.run().await
     }
 }

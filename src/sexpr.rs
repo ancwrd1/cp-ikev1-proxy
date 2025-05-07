@@ -44,9 +44,7 @@ impl SExpression {
     }
 
     pub fn get_value<T: FromStr>(&self, path: &str) -> Option<T> {
-        self.get(path)
-            .and_then(|v| v.as_value())
-            .and_then(|v| v.parse().ok())
+        self.get(path).and_then(|v| v.as_value()).and_then(|v| v.parse().ok())
     }
 
     pub fn get_num_value<T: Num>(&self, path: &str) -> Option<T> {
@@ -67,11 +65,7 @@ impl SExpression {
                 SExpression::Object(maybe_name, fields)
                     if maybe_name.as_ref().is_some_and(|n| n == name) || maybe_name.is_none() =>
                 {
-                    let name = if maybe_name.is_none() {
-                        Some(name)
-                    } else {
-                        iter.next()
-                    };
+                    let name = if maybe_name.is_none() { Some(name) } else { iter.next() };
                     match name {
                         Some(name) => {
                             for (f_name, f_value) in fields {
@@ -106,11 +100,7 @@ impl SExpression {
                 SExpression::Object(maybe_name, fields)
                     if maybe_name.as_ref().is_some_and(|n| n == name) || maybe_name.is_none() =>
                 {
-                    let name = if maybe_name.is_none() {
-                        Some(name)
-                    } else {
-                        iter.next()
-                    };
+                    let name = if maybe_name.is_none() { Some(name) } else { iter.next() };
                     match name {
                         Some(name) => {
                             for (f_name, f_value) in fields {
@@ -124,9 +114,7 @@ impl SExpression {
                     }
                 }
                 SExpression::Array(items) => match name.parse::<usize>() {
-                    Ok(index) => items
-                        .get_mut(index)
-                        .and_then(|item| item.get_for_parts_mut(iter)),
+                    Ok(index) => items.get_mut(index).and_then(|item| item.get_for_parts_mut(iter)),
                     Err(_) => None,
                 },
                 _ => None,
@@ -139,9 +127,7 @@ impl SExpression {
         match self {
             SExpression::Null => None,
             SExpression::Value(value) => Some(format_value(value)),
-            SExpression::Object(name, object) => {
-                Some(self.encode_object(level, name.as_deref(), object))
-            }
+            SExpression::Object(name, object) => Some(self.encode_object(level, name.as_deref(), object)),
             SExpression::Array(items) => Some(self.encode_array(level, items)),
         }
     }
@@ -186,9 +172,7 @@ impl SExpression {
             Self::Null => Value::Null,
             Self::Value(v) => to_json_value(v),
             Self::Object(name, fields) => to_json_object(name.as_deref(), fields),
-            SExpression::Array(elements) => {
-                Value::Array(elements.iter().map(|v| v.to_json()).collect())
-            }
+            SExpression::Array(elements) => Value::Array(elements.iter().map(|v| v.to_json()).collect()),
         }
     }
 
@@ -210,12 +194,7 @@ impl SExpression {
                         .map(|(k, v)| (k.to_string(), Self::from_json(v.clone())))
                         .collect(),
                 ),
-                _ => Self::Object(
-                    None,
-                    v.into_iter()
-                        .map(|(k, v)| (k, Self::from_json(v)))
-                        .collect(),
-                ),
+                _ => Self::Object(None, v.into_iter().map(|(k, v)| (k, Self::from_json(v))).collect()),
             },
         }
     }
@@ -274,10 +253,7 @@ fn format_value(value: &str) -> String {
     }
 }
 
-fn to_json_object<N: AsRef<str>, K: AsRef<str>>(
-    name: Option<N>,
-    fields: &BTreeMap<K, SExpression>,
-) -> Value {
+fn to_json_object<N: AsRef<str>, K: AsRef<str>>(name: Option<N>, fields: &BTreeMap<K, SExpression>) -> Value {
     let inner = Value::Object(
         fields
             .iter()
@@ -285,11 +261,7 @@ fn to_json_object<N: AsRef<str>, K: AsRef<str>>(
             .collect(),
     );
     if let Some(name) = name {
-        Value::Object(
-            [(format!("({}", name.as_ref()), inner)]
-                .into_iter()
-                .collect(),
-        )
+        Value::Object([(format!("({}", name.as_ref()), inner)].into_iter().collect())
     } else {
         inner
     }

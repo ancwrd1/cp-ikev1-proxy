@@ -51,18 +51,10 @@ pub struct ProxyParams {
     )]
     pub cert_password: Option<String>,
 
-    #[clap(
-        long = "cert-id",
-        short = 'i',
-        help = "Certificate ID in hexadecimal form"
-    )]
+    #[clap(long = "cert-id", short = 'i', help = "Certificate ID in hexadecimal form")]
     pub cert_id: Option<String>,
 
-    #[clap(
-        long = "no-mfa",
-        short = 'n',
-        help = "Disable multi-factor authentication"
-    )]
+    #[clap(long = "no-mfa", short = 'n', help = "Disable multi-factor authentication")]
     pub no_mfa: bool,
 
     #[clap(help = "Downstream VPN server address")]

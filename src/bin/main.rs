@@ -18,9 +18,7 @@ async fn main() -> anyhow::Result<()> {
 
 fn init_logging() -> anyhow::Result<()> {
     if std::env::var("RUST_LOG").is_err() {
-        let subscriber = tracing_subscriber::fmt()
-            .with_max_level(LevelFilter::DEBUG)
-            .finish();
+        let subscriber = tracing_subscriber::fmt().with_max_level(LevelFilter::DEBUG).finish();
         tracing::subscriber::set_global_default(subscriber)?;
     } else {
         let subscriber = tracing_subscriber::fmt()

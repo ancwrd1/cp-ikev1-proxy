@@ -7,13 +7,10 @@ use isakmp::{
     ikev1::{service::Ikev1Service, session::Ikev1Session},
     message::{IsakmpMessage, IsakmpMessageCodec},
     model::{
-        AttributesPayloadType, CertificateType, ExchangeType, Identity, IdentityRequest,
-        IdentityType, IsakmpFlags, NotifyMessageType, PayloadType, ProtocolId,
+        AttributesPayloadType, CertificateType, ExchangeType, Identity, IdentityRequest, IdentityType, IsakmpFlags,
+        NotifyMessageType, PayloadType, ProtocolId,
     },
-    payload::{
-        AttributesPayload, BasicPayload, CertificatePayload, IdentificationPayload, Payload,
-        PayloadLike,
-    },
+    payload::{AttributesPayload, BasicPayload, CertificatePayload, IdentificationPayload, Payload, PayloadLike},
     session::{IsakmpSession, SessionType},
 };
 use tracing::debug;
@@ -65,29 +62,17 @@ impl Ikev1SessionHandler {
             }
         }
 
-        if msg
-            .payloads
-            .iter()
-            .any(|p| matches!(p, Payload::KeyExchange(_)))
-        {
+        if msg.payloads.iter().any(|p| matches!(p, Payload::KeyExchange(_))) {
             debug!("<<< Upstream KE request");
             return Ok(vec![self.handle_ke(msg).await?]);
         }
 
-        if msg
-            .payloads
-            .iter()
-            .any(|p| matches!(p, Payload::Identification(_)))
-        {
+        if msg.payloads.iter().any(|p| matches!(p, Payload::Identification(_))) {
             debug!("<<< Upstream IDPROT request");
             return self.handle_id(msg).await;
         }
 
-        if msg
-            .payloads
-            .iter()
-            .any(|p| matches!(p, Payload::Attributes(_)))
-        {
+        if msg.payloads.iter().any(|p| matches!(p, Payload::Attributes(_))) {
             debug!("<<< Upstream ATTR request");
             return Ok(vec![self.handle_attributes(msg).await?]);
         }
@@ -100,9 +85,7 @@ impl Ikev1SessionHandler {
 
         debug!(">>> Downstream SA response: {:#?}", response);
 
-        self.downstream_service
-            .session()
-            .init_from_sa(proposal.clone())?;
+        self.downstream_service.session().init_from_sa(proposal.clone())?;
 
         self.upstream_session.init_from_sa(proposal)?;
 
@@ -174,10 +157,7 @@ impl Ikev1SessionHandler {
             with_mfa: !self.params.no_mfa,
         };
 
-        let (response, message_id) = self
-            .downstream_service
-            .do_identity_protection(request)
-            .await?;
+        let (response, message_id) = self.downstream_service.do_identity_protection(request).await?;
 
         let mut result = Vec::new();
 
@@ -332,11 +312,7 @@ impl Ikev1SessionHandler {
         Ok(self.upstream_codec.encode(&msg))
     }
 
-    fn build_attrs_response(
-        &mut self,
-        attributes: AttributesPayload,
-        message_id: u32,
-    ) -> anyhow::Result<Bytes> {
+    fn build_attrs_response(&mut self, attributes: AttributesPayload, message_id: u32) -> anyhow::Result<Bytes> {
         let attr_payload = Payload::Attributes(attributes);
         let hash_payload = self.make_hash_from_payloads(message_id, &[&attr_payload])?;
 
@@ -355,17 +331,11 @@ impl Ikev1SessionHandler {
         Ok(self.upstream_codec.encode(&msg))
     }
 
-    fn make_hash_from_payloads(
-        &self,
-        message_id: u32,
-        payloads: &[&Payload],
-    ) -> anyhow::Result<Payload> {
+    fn make_hash_from_payloads(&self, message_id: u32, payloads: &[&Payload]) -> anyhow::Result<Payload> {
         let mut buf = BytesMut::new();
         for (i, payload) in payloads.iter().enumerate() {
             let data = payload.to_bytes();
-            let next_payload = payloads
-                .get(i + 1)
-                .map_or(PayloadType::None, |p| p.as_payload_type());
+            let next_payload = payloads.get(i + 1).map_or(PayloadType::None, |p| p.as_payload_type());
             buf.put_u8(next_payload.into());
             buf.put_u8(0);
             buf.put_u16(4 + data.len() as u16);

@@ -31,11 +31,7 @@ pub struct HttpsProxy {
 }
 
 impl HttpsProxy {
-    pub async fn new(
-        params: Arc<ProxyParams>,
-        upstream: TcpStream,
-        downstream: TcpStream,
-    ) -> anyhow::Result<Self> {
+    pub async fn new(params: Arc<ProxyParams>, upstream: TcpStream, downstream: TcpStream) -> anyhow::Result<Self> {
         let tls_identity = Identity::from_pkcs12(KEYSTORE, KEYSTORE_PASSWORD)?;
         let tls_acceptor = TlsAcceptor::new(tls_identity)?;
         let tls_acceptor = tokio_native_tls::TlsAcceptor::from(tls_acceptor);
@@ -51,9 +47,7 @@ impl HttpsProxy {
             .build()?;
         let tls_connector = tokio_native_tls::TlsConnector::from(tls_connector);
 
-        let downstream_tls = tls_connector
-            .connect(&params.server_address, downstream)
-            .await?;
+        let downstream_tls = tls_connector.connect(&params.server_address, downstream).await?;
 
         debug!(">>> Downstream TLS connection succeeded");
 
@@ -95,10 +89,7 @@ impl HttpsProxy {
         let status = res.status();
         let data = res.collect().await?.to_bytes();
 
-        debug!(
-            ">>> Downstream response data: {}",
-            String::from_utf8_lossy(&data)
-        );
+        debug!(">>> Downstream response data: {}", String::from_utf8_lossy(&data));
 
         let new_data = if status.is_success() {
             // "internal_ca_fingerprint" is used to verify the validity of the IKE certificate during IDPROT exchange.
@@ -126,8 +117,7 @@ impl HttpsProxy {
     fn replace_ca_fingerprint(&self, data: &[u8]) -> anyhow::Result<Bytes> {
         let mut sexpr: SExpression = String::from_utf8_lossy(data).parse()?;
 
-        let sub_expr = sexpr
-            .get_mut("CCCserverResponse:ResponseData:connectivity_info:internal_ca_fingerprint");
+        let sub_expr = sexpr.get_mut("CCCserverResponse:ResponseData:connectivity_info:internal_ca_fingerprint");
 
         if let Some(SExpression::Object(_, map)) = sub_expr {
             let pkcs8 = Pkcs8Certificate::from_pkcs12(KEYSTORE, KEYSTORE_PASSWORD)?;
@@ -144,9 +134,7 @@ impl HttpsProxy {
     }
 }
 
-async fn parse_http_request(
-    stream: &mut tokio_native_tls::TlsStream<TcpStream>,
-) -> anyhow::Result<Request<Bytes>> {
+async fn parse_http_request(stream: &mut tokio_native_tls::TlsStream<TcpStream>) -> anyhow::Result<Request<Bytes>> {
     let mut reader = BufReader::new(stream);
 
     let mut message = String::new();
@@ -230,16 +218,12 @@ async fn parse_http_request(
             builder.header(h.name, h.value)
         });
 
-    let request = builder
-        .uri(parsed_req.path.unwrap_or_default())
-        .body(body)?;
+    let request = builder.uri(parsed_req.path.unwrap_or_default()).body(body)?;
 
     Ok(request)
 }
 
-async fn read_chunked_body<S: AsyncRead + Unpin>(
-    reader: &mut BufReader<S>,
-) -> anyhow::Result<Bytes> {
+async fn read_chunked_body<S: AsyncRead + Unpin>(reader: &mut BufReader<S>) -> anyhow::Result<Bytes> {
     let mut buffer = BytesMut::new();
 
     loop {
