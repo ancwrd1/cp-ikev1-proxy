@@ -89,10 +89,15 @@ impl HttpsProxy {
 
         let res = self.downstream_sender.send_request(downstream_req).await?;
 
-        debug!(">>> Downstream response: {:#?}", res);
+        debug!(">>> Downstream response headers: {:#?}", res);
 
         let status = res.status();
         let data = res.collect().await?.to_bytes();
+
+        debug!(
+            ">>> Downstream response data: {}",
+            String::from_utf8_lossy(&data)
+        );
 
         let new_data = if status.is_success() {
             // "internal_ca_fingerprint" is used to verify the validity of the IKE certificate during IDPROT exchange.
