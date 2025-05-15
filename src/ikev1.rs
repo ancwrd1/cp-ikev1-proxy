@@ -139,9 +139,7 @@ impl Ikev1SessionHandler {
         debug!("<<< Upstream IDPROT request: {:#?}", message);
 
         let Some(data) = message.payloads.iter().find_map(|payload| match payload {
-            Payload::Notification(notify)
-                if NotifyMessageType::from(notify.message_type) == NotifyMessageType::CccAuth =>
-            {
+            Payload::Notification(notify) if notify.message_type == NotifyMessageType::CccAuth => {
                 Some(notify.data.clone())
             }
             _ => None,
