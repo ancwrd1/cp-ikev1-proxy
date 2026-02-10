@@ -89,7 +89,7 @@ impl Ikev1SessionHandler {
 
         self.upstream_session.init_from_sa(proposal)?;
 
-        Ok(self.upstream_codec.encode(&response))
+        Ok(self.upstream_codec.encode(&response)?)
     }
 
     async fn handle_esp_sa(&mut self, message: IsakmpMessage) -> anyhow::Result<Bytes> {
@@ -270,7 +270,7 @@ impl Ikev1SessionHandler {
             payloads,
         };
 
-        Ok(self.upstream_codec.encode(&msg))
+        Ok(self.upstream_codec.encode(&msg)?)
     }
 
     fn build_id_response(&mut self) -> anyhow::Result<Bytes> {
@@ -307,7 +307,7 @@ impl Ikev1SessionHandler {
             payloads,
         };
 
-        Ok(self.upstream_codec.encode(&msg))
+        Ok(self.upstream_codec.encode(&msg)?)
     }
 
     fn build_attrs_response(&mut self, attributes: AttributesPayload, message_id: u32) -> anyhow::Result<Bytes> {
@@ -326,7 +326,7 @@ impl Ikev1SessionHandler {
 
         debug!("<<< Upstream ATTR response: {:#?}", msg);
 
-        Ok(self.upstream_codec.encode(&msg))
+        Ok(self.upstream_codec.encode(&msg)?)
     }
 
     fn make_hash_from_payloads(&self, message_id: u32, payloads: &[&Payload]) -> anyhow::Result<Payload> {

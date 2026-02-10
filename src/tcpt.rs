@@ -49,7 +49,7 @@ impl TcptProxy {
             Some(CertType::Pkcs12) => match (&params.cert_path, &params.cert_password) {
                 (Some(path), Some(password)) => Identity::Pkcs12 {
                     data: std::fs::read(path)?,
-                    password: password.clone(),
+                    password: password.clone().into(),
                 },
                 _ => anyhow::bail!("No PKCS12 path and password provided!"),
             },
@@ -60,7 +60,7 @@ impl TcptProxy {
             Some(CertType::Pkcs11) => match params.cert_password {
                 Some(ref pin) => Identity::Pkcs11 {
                     driver_path: params.cert_path.clone().unwrap_or_else(|| "opensc-pkcs11.so".into()),
-                    pin: pin.clone(),
+                    pin: pin.clone().into(),
                     key_id: params
                         .cert_id
                         .as_ref()

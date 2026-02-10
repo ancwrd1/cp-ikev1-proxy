@@ -11,9 +11,8 @@ use isakmp::{
     rfc1751::key_to_english,
 };
 use native_tls::{Identity, TlsAcceptor, TlsConnector};
-use tokio::io::AsyncRead;
 use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
 };
 use tracing::{debug, warn};
@@ -37,6 +36,12 @@ impl HttpsProxy {
         let tls_acceptor = tokio_native_tls::TlsAcceptor::from(tls_acceptor);
 
         let upstream_tls = tls_acceptor.accept(upstream).await?;
+        if let Ok(Some(cert)) = upstream_tls.get_ref().peer_certificate()
+            && let Ok(der) = cert.to_der()
+            && let Ok((_, parsed)) = x509_parser::parse_x509_certificate(&der)
+        {
+            debug!("Upstream certificate: {:?}", parsed);
+        }
 
         debug!("<<< Upstream TLS connection accepted");
 
