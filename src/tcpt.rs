@@ -50,11 +50,15 @@ impl TcptProxy {
                 (Some(path), Some(password)) => Identity::Pkcs12 {
                     data: std::fs::read(path)?,
                     password: password.clone().into(),
+                    hybrid_auth: !params.no_mfa,
                 },
                 _ => anyhow::bail!("No PKCS12 path and password provided!"),
             },
             Some(CertType::Pkcs8) => match params.cert_path {
-                Some(ref path) => Identity::Pkcs8 { path: path.clone() },
+                Some(ref path) => Identity::Pkcs8 {
+                    path: path.clone(),
+                    hybrid_auth: !params.no_mfa,
+                },
                 None => anyhow::bail!("No PKCS8 PEM path provided!"),
             },
             Some(CertType::Pkcs11) => match params.cert_password {
@@ -65,6 +69,7 @@ impl TcptProxy {
                         .cert_id
                         .as_ref()
                         .map(|s| hex::decode(s.replace(':', "")).unwrap_or_default().into()),
+                    hybrid_auth: !params.no_mfa,
                 },
                 None => anyhow::bail!("No PKCS11 pin provided!"),
             },
