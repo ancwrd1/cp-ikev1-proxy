@@ -127,7 +127,7 @@ impl HttpsProxy {
         if let Some(SExpression::Object(_, map)) = sub_expr {
             let pkcs8 = Pkcs8Certificate::from_pkcs12(KEYSTORE, KEYSTORE_PASSWORD)?;
             let fingerprint = pkcs8.fingerprint();
-            let words = key_to_english(&fingerprint[0..16])?.join(" ");
+            let words = key_to_english(fingerprint[0..16].try_into()?).join(" ");
             let encoded = snx_encrypt(words.as_bytes());
 
             debug!("Replacing internal_ca_fingerprint with: {}", words);
