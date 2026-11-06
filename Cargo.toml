@@ -10,6 +10,7 @@ name = "cp-ikev1-proxy"
 [dependencies]
 tokio = { version = "1",  features = ["full"] }
 anyhow = "1"
+async-trait = "0.1"
 bytes = "1"
 isakmp = { git = "https://github.com/ancwrd1/isakmp.git" }
 tokio-util = { version = "0.7", features = ["codec"] }

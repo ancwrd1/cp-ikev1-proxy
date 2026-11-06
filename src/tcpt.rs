@@ -13,6 +13,7 @@ use tokio_util::codec::Decoder;
 use crate::{
     ikev1::Ikev1SessionHandler,
     params::{CertType, ProxyParams},
+    transport::SharedTransport,
 };
 
 pub struct TcptProxy {
@@ -79,16 +80,14 @@ impl TcptProxy {
 
         let session = Ikev1Session::new(identity, SessionType::Initiator)?;
         let codec = Ikev1Codec::new(session.clone());
-        let service = Ikev1Service::new(
-            Box::new(TcptTransport::with_stream(
-                TcptDataType::Ike,
-                downstream,
-                Box::new(codec),
-            )),
-            session,
-        )?;
+        let transport = SharedTransport::new(Box::new(TcptTransport::with_stream(
+            TcptDataType::Ike,
+            downstream,
+            Box::new(codec),
+        )));
+        let service = Ikev1Service::new(Box::new(transport.clone()), session)?;
 
-        let session_handler = Ikev1SessionHandler::new(params, service)?;
+        let session_handler = Ikev1SessionHandler::new(params, service, transport)?;
 
         Ok(Self {
             upstream,
