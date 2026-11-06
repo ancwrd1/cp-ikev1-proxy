@@ -2,15 +2,18 @@ use std::{net::Ipv4Addr, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use bytes::{BufMut, Bytes, BytesMut};
+use isakmp::ikev1::message::Ikev1Message;
+use isakmp::ikev1::model::{
+    AttributesPayloadType, CertificateType, ExchangeType, IdentityRequest, IdentityType, IsakmpFlags,
+    NotifyMessageType, PayloadType, ProtocolId,
+};
+use isakmp::ikev1::payload::{AttributesPayload, CertificatePayload, IdentificationPayload, Payload};
 use isakmp::{
     certs::{ClientCertificate, Pkcs8Certificate},
     ikev1::{service::Ikev1Service, session::Ikev1Session},
-    message::{IsakmpMessage, IsakmpMessageCodec},
-    model::{
-        AttributesPayloadType, CertificateType, ExchangeType, Identity, IdentityRequest, IdentityType, IsakmpFlags,
-        NotifyMessageType, PayloadType, ProtocolId,
-    },
-    payload::{AttributesPayload, BasicPayload, CertificatePayload, IdentificationPayload, Payload, PayloadLike},
+    message::IsakmpMessageCodec,
+    model::Identity,
+    payload::{BasicPayload, PayloadLike},
     session::{IsakmpSession, SessionType},
 };
 use tracing::debug;
@@ -22,7 +25,7 @@ use crate::{
 
 pub struct Ikev1SessionHandler {
     upstream_session: Ikev1Session,
-    upstream_codec: Box<dyn IsakmpMessageCodec + Send + Sync>,
+    upstream_codec: Box<dyn IsakmpMessageCodec<Ikev1Message> + Send + Sync>,
     downstream_service: Ikev1Service,
     downstream_message_id: u32,
     params: Arc<ProxyParams>,
@@ -80,7 +83,7 @@ impl Ikev1SessionHandler {
         Ok(Vec::new())
     }
 
-    async fn handle_sa(&mut self, message: IsakmpMessage) -> anyhow::Result<Bytes> {
+    async fn handle_sa(&mut self, message: Ikev1Message) -> anyhow::Result<Bytes> {
         let (proposal, response) = self.downstream_service.send_sa_proposal(message).await?;
 
         debug!(">>> Downstream SA response: {:#?}", response);
@@ -92,7 +95,7 @@ impl Ikev1SessionHandler {
         self.upstream_codec.encode(&response)
     }
 
-    async fn handle_esp_sa(&mut self, message: IsakmpMessage) -> anyhow::Result<Bytes> {
+    async fn handle_esp_sa(&mut self, message: Ikev1Message) -> anyhow::Result<Bytes> {
         debug!("<<< Upstream ESP SA request: {:#?}", message);
 
         let attrs = self
@@ -105,7 +108,7 @@ impl Ikev1SessionHandler {
         Ok(Bytes::new())
     }
 
-    async fn handle_ke(&mut self, message: IsakmpMessage) -> anyhow::Result<Bytes> {
+    async fn handle_ke(&mut self, message: Ikev1Message) -> anyhow::Result<Bytes> {
         debug!("<<< Upstream KE request: {:#?}", message);
 
         self.downstream_service
@@ -135,7 +138,7 @@ impl Ikev1SessionHandler {
         self.build_ke_response()
     }
 
-    async fn handle_id(&mut self, message: IsakmpMessage) -> anyhow::Result<Vec<Bytes>> {
+    async fn handle_id(&mut self, message: Ikev1Message) -> anyhow::Result<Vec<Bytes>> {
         debug!("<<< Upstream IDPROT request: {:#?}", message);
 
         let Some(data) = message.payloads.iter().find_map(|payload| match payload {
@@ -168,7 +171,7 @@ impl Ikev1SessionHandler {
         Ok(result)
     }
 
-    async fn handle_attributes(&mut self, message: IsakmpMessage) -> anyhow::Result<Bytes> {
+    async fn handle_attributes(&mut self, message: Ikev1Message) -> anyhow::Result<Bytes> {
         debug!("<<< Upstream ATTR request: {:#?}", message);
 
         self.downstream_message_id = message.message_id;
@@ -192,9 +195,9 @@ impl Ikev1SessionHandler {
                 .downstream_service
                 .make_hash_from_payloads(self.downstream_message_id, &[&attrs_payload])?;
 
-            let msg = IsakmpMessage {
-                cookie_i: self.upstream_session.cookie_i(),
-                cookie_r: self.upstream_session.cookie_r(),
+            let msg = Ikev1Message {
+                initiator_spi: self.upstream_session.initiator_spi(),
+                responder_spi: self.upstream_session.responder_spi(),
                 version: 0x10,
                 exchange_type: ExchangeType::Transaction,
                 flags: IsakmpFlags::ENCRYPTION,
@@ -220,8 +223,8 @@ impl Ikev1SessionHandler {
         let remote_ip: u32 = 0;
 
         let hash_r = self.upstream_session.hash(&[
-            self.upstream_session.cookie_i().to_be_bytes().as_slice(),
-            self.upstream_session.cookie_r().to_be_bytes().as_slice(),
+            self.upstream_session.initiator_spi().to_be_bytes().as_slice(),
+            self.upstream_session.responder_spi().to_be_bytes().as_slice(),
             remote_ip.to_be_bytes().as_slice(),
             4500u16.to_be_bytes().as_slice(),
         ])?;
@@ -231,8 +234,8 @@ impl Ikev1SessionHandler {
         let local_ip: u32 = 0;
 
         let hash_i = self.upstream_session.hash(&[
-            self.upstream_session.cookie_i().to_be_bytes().as_slice(),
-            self.upstream_session.cookie_r().to_be_bytes().as_slice(),
+            self.upstream_session.initiator_spi().to_be_bytes().as_slice(),
+            self.upstream_session.responder_spi().to_be_bytes().as_slice(),
             local_ip.to_be_bytes().as_slice(),
             &[0, 0],
         ])?;
@@ -260,9 +263,9 @@ impl Ikev1SessionHandler {
             natd_i_payload,
         ];
 
-        let msg = IsakmpMessage {
-            cookie_i: self.upstream_session.cookie_i(),
-            cookie_r: self.upstream_session.cookie_r(),
+        let msg = Ikev1Message {
+            initiator_spi: self.upstream_session.initiator_spi(),
+            responder_spi: self.upstream_session.responder_spi(),
             version: 0x10,
             exchange_type: ExchangeType::IdentityProtection,
             flags: IsakmpFlags::empty(),
@@ -295,11 +298,14 @@ impl Ikev1SessionHandler {
                 data: c,
             }));
         }
-        payloads.push(Payload::Signature(BasicPayload { data: signature }));
+        payloads.push(Payload::Signature(BasicPayload {
+            data: signature,
+            sensitive: false,
+        }));
 
-        let msg = IsakmpMessage {
-            cookie_i: self.upstream_session.cookie_i(),
-            cookie_r: self.upstream_session.cookie_r(),
+        let msg = Ikev1Message {
+            initiator_spi: self.upstream_session.initiator_spi(),
+            responder_spi: self.upstream_session.responder_spi(),
             version: 0x10,
             exchange_type: ExchangeType::IdentityProtection,
             flags: IsakmpFlags::ENCRYPTION,
@@ -314,9 +320,9 @@ impl Ikev1SessionHandler {
         let attr_payload = Payload::Attributes(attributes);
         let hash_payload = self.make_hash_from_payloads(message_id, &[&attr_payload])?;
 
-        let msg = IsakmpMessage {
-            cookie_i: self.upstream_session.cookie_i(),
-            cookie_r: self.upstream_session.cookie_r(),
+        let msg = Ikev1Message {
+            initiator_spi: self.upstream_session.initiator_spi(),
+            responder_spi: self.upstream_session.responder_spi(),
             version: 0x10,
             exchange_type: ExchangeType::Transaction,
             flags: IsakmpFlags::ENCRYPTION,

@@ -56,7 +56,7 @@ impl TcptProxy {
             },
             Some(CertType::Pkcs8) => match params.cert_path {
                 Some(ref path) => Identity::Pkcs8 {
-                    path: path.clone(),
+                    data: std::fs::read(path)?,
                     hybrid_auth: !params.no_mfa,
                 },
                 None => anyhow::bail!("No PKCS8 PEM path provided!"),
@@ -78,14 +78,14 @@ impl TcptProxy {
         };
 
         let session = Ikev1Session::new(identity, SessionType::Initiator)?;
-        let codec = Ikev1Codec::new(Box::new(session.clone()));
+        let codec = Ikev1Codec::new(session.clone());
         let service = Ikev1Service::new(
             Box::new(TcptTransport::with_stream(
                 TcptDataType::Ike,
                 downstream,
                 Box::new(codec),
             )),
-            Box::new(session),
+            session,
         )?;
 
         let session_handler = Ikev1SessionHandler::new(params, service)?;
