@@ -245,7 +245,7 @@ async fn read_chunked_body<S: AsyncRead + Unpin>(reader: &mut BufReader<S>) -> a
 
         let mut crlf = [0u8; 2];
         reader.read_exact(&mut crlf).await?;
-        if crlf != [b'\r', b'\n'] {
+        if crlf != *b"\r\n" {
             anyhow::bail!("Invalid chunk ending");
         }
 
